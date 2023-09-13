@@ -2,12 +2,15 @@ import path from "path";
 import { z } from "zod";
 import { Config } from "./types";
 
-export const validateConfig = (options: Config) => {
+export const validateConfig = (config?: Config) => {
+  if (!config) {
+    throw new Error("Can not find config for vite-plugin-content");
+  }
   const DocumentSchema = z.object({
     name: z.string(),
     folder: z.string(),
   });
-  const OptionsSchema = z.object({
+  const ConfigSchema = z.object({
     contentDirPath: z.string(),
     outputDirPath: z.string().default("./.content"),
     documents: z.array(DocumentSchema),
@@ -15,15 +18,15 @@ export const validateConfig = (options: Config) => {
     rehypePlugins: z.array(z.any()).optional(),
   });
   try {
-    OptionsSchema.parse(options);
+    ConfigSchema.parse(config);
   } catch (err) {
-    throw new Error("VitePluginContent parse options failed");
+    throw new Error("VitePluginContent parse config failed");
   }
 
-  const inputDirPath = path.resolve(process.cwd(), options.contentDirPath);
+  const inputDirPath = path.resolve(process.cwd(), config.contentDirPath);
   const outputDirPath = path.resolve(
     process.cwd(),
-    options.outputDirPath || ".content"
+    config.outputDirPath || ".content"
   );
 
   if (!isDiffPath(inputDirPath, outputDirPath)) {
@@ -31,7 +34,7 @@ export const validateConfig = (options: Config) => {
   }
 
   return {
-    options,
+    config,
     inputDirPath,
     outputDirPath,
   };

@@ -5,22 +5,22 @@ import { validateConfig } from "../validate-config";
 import { enhanceDocuments } from "../enhance-documents";
 import { Config } from "../types";
 
-export const generate = async (config: Config) => {
-  const { options, inputDirPath, outputDirPath } = validateConfig(config);
-  const { documents } = options;
+export const generate = async (_config: Config) => {
+  const { config, inputDirPath, outputDirPath } = validateConfig(_config);
+  const { documents } = config;
   const enhancedDocuments = enhanceDocuments({ documents, inputDirPath });
 
   if (Object.keys(enhancedDocuments.byPath).length) {
     // generate all .{mdx|md}.json
     await Promise.all(
-      Object.entries(enhancedDocuments.byPath).map(([path, config]) =>
+      Object.entries(enhancedDocuments.byPath).map(([path, document]) =>
         genMdxJson({
           file: path,
           outputDirPath,
           inputDirPath,
-          fieldsSchema: config.fields,
-          remarkPlugins: options.remarkPlugins,
-          rehypePlugins: options.rehypePlugins,
+          fieldsSchema: document.fields,
+          remarkPlugins: config.remarkPlugins,
+          rehypePlugins: config.rehypePlugins,
         })
       )
     );

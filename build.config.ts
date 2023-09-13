@@ -8,6 +8,7 @@ export default defineBuildConfig([
     externals: ["vite"],
     rollup: {
       emitCJS: true,
+      output: { exports: "named" },
       dts: {
         tsconfig: "./configs/tsconfig.build.json",
       },
