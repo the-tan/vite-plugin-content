@@ -11,9 +11,17 @@
   "bin": {
     "vite-plugin-content": "./dist/cli/index.mjs"
   },
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./dist/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],
@@ -23,24 +31,33 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
-    "./remark-plugins": {
+    "./remark-plugins/*": {
       "import": "./dist/remark-plugins/index.mjs",
       "require": "./dist/remark-plugins/index.cjs",
       "types": "./dist/remark-plugins/index.d.ts"
+    },
+    "./cli/*": {
+      "import": "./dist/cli/index.mjs",
+      "require": "./dist/cli/index.cjs",
+      "types": "./dist/cli/index.d.ts"
     }
   },
   "scripts": {
     "build": "rimraf dist && unbuild",
-    "tsc": "tsc"
+    "build:tsup": "rimraf dist && tsup",
+    "typecheck": "tsc --noEmit",
+    "release": "bumpp && npm publish"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.1",
     "@types/micromatch": "^4.0.2",
     "@types/mustache": "^4.2.2",
     "@types/node": "^20.6.0",
+    "bumpp": "^9.2.0",
     "rimraf": "^5.0.1",
     "rollup": "^3.29.1",
     "tslib": "^2.6.2",
+    "tsup": "^7.2.0",
     "typescript": "^5.0.2",
     "unbuild": "^2.0.0",
     "vite": "^4.4.5"

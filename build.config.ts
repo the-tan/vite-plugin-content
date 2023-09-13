@@ -1,24 +1,38 @@
 import { defineBuildConfig } from "unbuild";
 
-export default defineBuildConfig({
-  entries: [
-    { input: "src/index", name: "index" },
-    {
-      input: "src/cli",
-      name: "cli/index",
+export default defineBuildConfig([
+  {
+    entries: ["src/index"],
+    name: "src/index",
+    clean: true,
+    externals: ["vite"],
+    rollup: {
+      emitCJS: true,
+      dts: {
+        tsconfig: "./configs/tsconfig.build.json",
+      },
     },
-    {
-      input: "src/remark-plugins/index",
-      name: "remark-plugins/index",
-      outDir: "dist/remark-plugins",
-    },
-  ],
-  clean: true,
-  declaration: true,
-  externals: ["vite"],
-  rollup: {
-    emitCJS: true,
-    inlineDependencies: true,
+    declaration: true,
+    failOnWarn: false,
   },
-  failOnWarn: false,
-});
+  {
+    entries: ["src/remark-plugins/index"],
+    name: "remark-plugins",
+    clean: true,
+    rollup: {
+      emitCJS: true,
+      dts: {
+        tsconfig: "./configs/tsconfig.build.json",
+      },
+    },
+    declaration: true,
+    failOnWarn: false,
+  },
+  {
+    entries: ["src/cli/index"],
+    name: "src/cli",
+    clean: true,
+    declaration: false,
+    failOnWarn: false,
+  },
+]);
