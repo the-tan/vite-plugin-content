@@ -11,28 +11,14 @@ export const genEntryJS = async ({
   documents: DocumentConfig[];
   outputDirPath: string;
 }) => {
-  const templates = documents.map((document) => {
-    const importName = getExportAllName(document);
-    return {
-      importName,
-      importString: `import { ${importName} } from "./${getSourceJSName(
-        document
-      )}"`,
-    };
-  });
   const variables = {
-    allImportString: templates.map((t) => t.importString).join("\n"),
-    allImportNames: templates.map((t) => t.importName).join(", "),
+    allExportString: documents
+      .map((document) => `export * from "./${getSourceJSName(document)}";`)
+      .join("\n"),
   };
 
   return fs.outputFile(
     path.resolve(outputDirPath, "generated", "index.mjs"),
-    Mustache.render(
-      `{{{allImportString}}}
-
-export { {{{allImportNames}}} };
-      `,
-      variables
-    )
+    Mustache.render(`{{{allExportString}}}`, variables)
   );
 };

@@ -50,6 +50,6 @@ export const generate = async ({
       genEntryJS({ outputDirPath, documents: config.documents }),
     ]);
     // generate .d.ts
-    await genTypes({ outputDirPath });
+    await genTypes({ outputDirPath, documents: config.documents });
   }
 };

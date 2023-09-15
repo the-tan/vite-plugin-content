@@ -1,4 +1,4 @@
-Similar to [contentlayer](https://contentlayer.dev/) but not as comprehensive, flexible and **only for md, mdx files currently**, still in WIP, and significant changes may occur at any time, so please use it cautiously.
+Similar to [contentlayer](https://contentlayer.dev/) but not as comprehensive, flexible and **only for md, mdx files currently**, still in WIP, and significant changes or errors may occur at any time, so please use it cautiously.
 
 # Setup
 
@@ -114,4 +114,47 @@ The modified parts need to correspond to the `outputDirPath` in your content.con
 # .gitignore
 
 .content
+```
+
+### 7. Add Code
+
+Show all blog titles
+
+```tsx
+import { allBlog } from "#content/generated/index.mjs";
+
+function App() {
+  return (
+    <ul>
+      {allBlog.map((blog) => (
+        <li key={blog.data.slug}>{blog.frontmatter.title}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Show blog page
+
+```tsx
+import { Blog } from "#content/generated/index.mjs";
+import { getMDXComponent } from "mdx-bundler/client";
+import { useMemo } from "react";
+
+function Blog({ blog }: { blog: Blog }) {
+  const { frontmatter, code } = blog;
+  const Component = useMemo(() => getMDXComponent(code), [code]);
+
+  return (
+    <>
+      <h1>{frontmatter.title}</h1>
+      <p>{frontmatter.date}</p>
+      <article>
+        <Component />
+      </article>
+    </>
+  );
+}
+
+export default Blog;
 ```

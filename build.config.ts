@@ -5,7 +5,7 @@ export default defineBuildConfig([
     entries: ["src/index"],
     name: "src/index",
     clean: true,
-    externals: ["vite", "tsup"],
+    externals: ["vite"],
     rollup: {
       emitCJS: true,
       output: { exports: "named" },
@@ -32,7 +32,6 @@ export default defineBuildConfig([
   {
     entries: ["src/cli/index"],
     name: "src/cli",
-    externals: ["tsup"],
     clean: true,
     declaration: false,
     failOnWarn: false,

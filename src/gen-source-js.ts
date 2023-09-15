@@ -13,8 +13,10 @@ const getImportName = ({
   name: string;
 }) => `${document.name}_${name}`;
 
+export const getSourceName = (document: DocumentConfig) =>
+  `${document.name.toLowerCase()}`;
 export const getSourceJSName = (document: DocumentConfig) =>
-  `${document.name.toLowerCase()}.mjs`;
+  `${getSourceName(document)}.mjs`;
 
 export const getExportAllName = (document: DocumentConfig) =>
   `all${document.name}`;
@@ -66,6 +68,7 @@ export const genSourceJS = async ({
       `{{{allSourceImports}}}
 
 const ${getExportAllName(document)} = [{{{allSource}}}];
+
 export { ${getExportAllName(document)} };
         `,
       variables
