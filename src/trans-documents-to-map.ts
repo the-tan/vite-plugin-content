@@ -1,8 +1,23 @@
 import path from "node:path";
-import { getPathsWith } from "./files";
 import { DocumentConfig } from "./types";
+import { globSync } from "glob";
 
-export const enhanceDocuments = ({
+const getPathsWith = ({
+  folderPath,
+  pattern,
+}: {
+  folderPath: string;
+  pattern: string;
+}) => {
+  if (!folderPath) return [];
+  return globSync(pattern, {
+    cwd: path.resolve(folderPath),
+    nodir: true,
+    absolute: true,
+  });
+};
+
+export const transDocumentsToMap = ({
   documents,
   inputDirPath,
 }: {

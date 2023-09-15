@@ -1,16 +1,31 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { build } from "tsup";
+import JoyCon from "joycon";
+
 export const genTypes = async ({
   outputDirPath,
 }: {
   outputDirPath: string;
 }) => {
-  // const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const configJoycon = new JoyCon();
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const tsconfigPath = path.resolve(__dirname, "..", "tsconfig.types.json");
-  // console.log(tsconfigPath);
-  // console.log(path.resolve(outputDirPath, "generated", "*.js"));
+
+  const tsconfigPath = await configJoycon.resolve({
+    files: [
+      path.resolve(__dirname, "..", "tsconfig.types.json"),
+      path.resolve(__dirname, "tsconfig.types.json"),
+    ],
+    cwd: process.cwd(),
+    // stopDir: path.parse(cwd).root,
+  });
+
+  if (!tsconfigPath) {
+    throw new Error(
+      `Can not find vite-plugin-content's tsconfig for generating types`
+    );
+  }
+
   await build({
     skipNodeModulesBundle: true,
     entry: [path.resolve(outputDirPath, "generated", "*.mjs")],

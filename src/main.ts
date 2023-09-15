@@ -1,17 +1,17 @@
 export { z } from "zod";
 import micromatch from "micromatch";
 import { genMdxJson } from "./gen-mdx-json";
-import { genEntryJS, genSourceJS } from "./files";
-import { enhanceDocuments } from "./enhance-documents";
+import { transDocumentsToMap } from "./trans-documents-to-map";
 import { Config } from "./types";
 import { Plugin } from "vite";
 import { loadConfig } from "./load";
+import { generate } from "./generate";
 
 export function vitePluginContent(_config?: Config): Plugin {
   let config: Config;
   let inputDirPath: string;
   let outputDirPath: string;
-  let enhancedDocuments: ReturnType<typeof enhanceDocuments>;
+  let documentsMap: ReturnType<typeof transDocumentsToMap>;
 
   return {
     name: "vite-plugin-content",
@@ -19,36 +19,20 @@ export function vitePluginContent(_config?: Config): Plugin {
     async config() {
       ({ config, inputDirPath, outputDirPath } = await loadConfig());
       const { documents } = config;
-      enhancedDocuments = enhanceDocuments({ documents, inputDirPath });
+      documentsMap = transDocumentsToMap({ documents, inputDirPath });
 
       return { server: { watch: { disableGlobbing: false } } };
     },
     async buildStart() {
-      if (Object.keys(enhancedDocuments.byPath).length) {
-        // generate all .{mdx|md}.json
-        await Promise.all(
-          Object.entries(enhancedDocuments.byPath).map(([path, document]) =>
-            genMdxJson({
-              file: path,
-              outputDirPath,
-              inputDirPath,
-              fieldsSchema: document.fields,
-              remarkPlugins: config.remarkPlugins,
-              rehypePlugins: config.rehypePlugins,
-            })
-          )
-        );
-        // generate all needed js
-        await Promise.all([
-          ...config.documents.map((document) =>
-            genSourceJS({ outputDirPath, document })
-          ),
-          genEntryJS({ outputDirPath, documents: config.documents }),
-        ]);
-      }
+      await generate({
+        config,
+        inputDirPath,
+        outputDirPath,
+        documentsMap,
+      });
     },
     async configureServer(server) {
-      const paths = Object.keys(enhancedDocuments.byPath);
+      const paths = Object.keys(documentsMap.byPath);
 
       server.watcher.add(paths);
       server.watcher.on("change", (path) => {
@@ -57,7 +41,7 @@ export function vitePluginContent(_config?: Config): Plugin {
             file: path,
             outputDirPath,
             inputDirPath,
-            fieldsSchema: enhancedDocuments.byPath[path].fields,
+            fieldsSchema: documentsMap.byPath[path].fields,
             remarkPlugins: config.remarkPlugins,
             rehypePlugins: config.rehypePlugins,
           });
