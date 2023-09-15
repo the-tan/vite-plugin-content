@@ -1,5 +1,5 @@
 import type * as unified from "unified";
-import type { Schema } from "zod";
+import type { ZodTypeDef, z } from "zod";
 
 export type DocumentConfig = {
   name: string;
@@ -12,7 +12,7 @@ export type DocumentConfig = {
    * The zod schema definition for md/mdx frontmatters
    * @default undefined
    */
-  fields?: Schema;
+  fields?: z.Schema;
 };
 
 export type Config = {

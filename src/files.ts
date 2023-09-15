@@ -15,7 +15,7 @@ const getImportName = ({
 }) => `${document.name}_${name}`;
 const getExportAllName = (document: DocumentConfig) => `all${document.name}`;
 const getSourceJSName = (document: DocumentConfig) =>
-  `${document.name.toLowerCase()}.js`;
+  `${document.name.toLowerCase()}.mjs`;
 
 export const genSourceJS = async ({
   outputDirPath,
@@ -93,7 +93,7 @@ export const genEntryJS = async ({
   };
 
   return fs.outputFile(
-    path.resolve(outputDirPath, "generated", "index.js"),
+    path.resolve(outputDirPath, "generated", "index.mjs"),
     Mustache.render(
       `{{{allImportString}}}
 

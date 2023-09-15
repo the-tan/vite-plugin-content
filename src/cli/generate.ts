@@ -1,12 +1,12 @@
 export { z } from "zod";
 import { genMdxJson } from "../gen-mdx-json";
 import { genEntryJS, genSourceJS } from "../files";
-import { validateConfig } from "../validate-config";
 import { enhanceDocuments } from "../enhance-documents";
-import { Config } from "../types";
+import { loadConfig } from "../load";
+import { genTypes } from "../gen-types";
 
-export const generate = async (_config: Config) => {
-  const { config, inputDirPath, outputDirPath } = validateConfig(_config);
+export const generate = async () => {
+  const { config, inputDirPath, outputDirPath } = await loadConfig();
   const { documents } = config;
   const enhancedDocuments = enhanceDocuments({ documents, inputDirPath });
 
@@ -29,5 +29,7 @@ export const generate = async (_config: Config) => {
       ...documents.map((document) => genSourceJS({ outputDirPath, document })),
       genEntryJS({ outputDirPath, documents }),
     ]);
+
+    await genTypes({ outputDirPath });
   }
 };

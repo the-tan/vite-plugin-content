@@ -2,11 +2,10 @@ export { z } from "zod";
 import micromatch from "micromatch";
 import { genMdxJson } from "./gen-mdx-json";
 import { genEntryJS, genSourceJS } from "./files";
-import { validateConfig } from "./validate-config";
 import { enhanceDocuments } from "./enhance-documents";
 import { Config } from "./types";
 import { Plugin } from "vite";
-import { readConfig } from "./read-config";
+import { loadConfig } from "./load";
 
 export function vitePluginContent(_config?: Config): Plugin {
   let config: Config;
@@ -18,10 +17,7 @@ export function vitePluginContent(_config?: Config): Plugin {
     name: "vite-plugin-content",
     enforce: "pre",
     async config() {
-      const temp = validateConfig(_config ?? (await readConfig()));
-      config = temp.config;
-      inputDirPath = temp.inputDirPath;
-      outputDirPath = temp.outputDirPath;
+      ({ config, inputDirPath, outputDirPath } = await loadConfig());
       const { documents } = config;
       enhancedDocuments = enhanceDocuments({ documents, inputDirPath });
 
