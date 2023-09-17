@@ -1,5 +1,5 @@
 import type * as unified from "unified";
-import type { ZodTypeDef, z } from "zod";
+import type { z } from "zod";
 
 export type DocumentConfig = {
   name: string;

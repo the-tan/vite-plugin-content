@@ -24,7 +24,6 @@ export const genTypes = async ({
       path.resolve(__dirname, "tsconfig.types.json"),
     ],
     cwd: process.cwd(),
-    // stopDir: path.parse(cwd).root,
   });
 
   if (!baseTsconfigPath) {

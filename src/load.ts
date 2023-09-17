@@ -13,7 +13,6 @@ export const loadConfig = async () => {
       "content.config.mjs",
     ],
     cwd: process.cwd(),
-    // stopDir: path.parse(cwd).root,
   });
 
   if (!configPath) {

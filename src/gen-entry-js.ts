@@ -1,7 +1,7 @@
 import fs from "fs-extra";
 import path from "path";
 import Mustache from "mustache";
-import { getExportAllName, getSourceJSName } from "./gen-source-js";
+import { getSourceJSName } from "./gen-source-js";
 import { DocumentConfig } from "./types";
 
 export const genEntryJS = async ({
