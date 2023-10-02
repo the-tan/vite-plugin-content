@@ -2,8 +2,18 @@ import path from "node:path";
 import { Schema, z } from "zod";
 import JoyCon from "joycon";
 import { bundleRequire } from "bundle-require";
+import fs from "fs-extra";
+import {
+  createMachine,
+  createActor,
+  fromPromise,
+  waitFor,
+  assign,
+} from "xstate";
+import { InternalConfig, LoadMachineContext } from "./types";
+import { checksum, compareChecksum, getPathsWith } from "./utils";
 
-export const loadConfig = async () => {
+const loadConfig = fromPromise(async () => {
   const configJoycon = new JoyCon();
   const configPath = await configJoycon.resolve({
     files: [
@@ -14,13 +24,195 @@ export const loadConfig = async () => {
     ],
     cwd: process.cwd(),
   });
-
   if (!configPath) {
     throw new Error("Can not find config for vite-plugin-content.");
   }
   const { mod } = await bundleRequire({ filepath: configPath });
+  const internalConfig = await validate(mod.default || mod);
+  internalConfig["configPath"] = configPath;
 
-  return validate(mod.default || mod);
+  return internalConfig;
+});
+
+const machine = createMachine(
+  {
+    types: {
+      context: {} as LoadMachineContext,
+    },
+    id: "Load",
+    initial: "loadingConfig",
+    context: {
+      config: {} as LoadMachineContext["config"],
+      isNewConfig: false,
+      allDocuments: [],
+      cacheSumMap: {},
+    },
+    states: {
+      loadingConfig: {
+        invoke: {
+          src: "loadConfig",
+          onDone: {
+            actions: assign(({ event }) => {
+              return { config: event.output };
+            }),
+            target: "checkCacheConfig",
+          },
+          onError: {
+            target: "error",
+          },
+        },
+      },
+      checkCacheConfig: {
+        always: [
+          {
+            guard: "isNewConfig",
+            actions: ["updateCacheConfig", assign({ isNewConfig: true })],
+            target: "getCachedSumMap",
+          },
+          {
+            target: "getCachedSumMap",
+          },
+        ],
+      },
+      getCachedSumMap: {
+        always: {
+          actions: ["getCacheSumMap"],
+          target: "getAllDocumentPaths",
+        },
+      },
+      getAllDocumentPaths: {
+        invoke: {
+          src: "getAllDocuments",
+          input: ({ context }) => context.config,
+          onDone: {
+            actions: assign({ allDocuments: ({ event }) => event.output }),
+            target: "groupDocuments",
+          },
+          onError: {
+            target: "error",
+          },
+        },
+      },
+      groupDocuments: {
+        always: {
+          actions: "groupDocuments",
+          target: "finish",
+        },
+      },
+      loadingCache: {
+        // invoke: {
+        //   src: "loadCache",
+        //   onDone: {
+        //     actions: () => {},
+        //   },
+        //   onError: {
+        //     target: "error",
+        //   },
+        // },
+      },
+      compareCache: {},
+      finish: {
+        type: "final",
+      },
+      error: {
+        type: "final",
+        entry: ({ event }) => console.log("Error: ", event),
+      },
+    },
+  },
+  {
+    actors: {
+      loadConfig,
+      getAllDocuments: fromPromise(
+        async ({ input }: { input: InternalConfig }) => {
+          const { documents, contentDirPath } = input;
+          const result: LoadMachineContext["allDocuments"] = await Promise.all(
+            documents.map(async (document) => {
+              const paths = await getPathsWith({
+                pattern: "**/*.{mdx,md}",
+                folderPath: path.resolve(contentDirPath, document.folder),
+              });
+              return Promise.all(
+                paths.map((path) =>
+                  checksum(path).then((sum) => ({
+                    path,
+                    sum,
+                    type: document.name,
+                  }))
+                )
+              );
+            })
+          ).then((arr) => arr.flat());
+          return result;
+        }
+      ),
+    },
+    guards: {
+      isNewConfig: ({ context: { config } }) => {
+        const cacheConfig = path.resolve(
+          config.outputDirPath,
+          "cache",
+          path.parse(config.configPath).base
+        );
+
+        if (!fs.pathExistsSync(cacheConfig)) {
+          return true;
+        }
+
+        return compareChecksum(cacheConfig, config.configPath) === false;
+      },
+    },
+    actions: {
+      updateCacheConfig: ({ context: { config } }) => {
+        const cacheDirPath = path.resolve(config.outputDirPath, "cache");
+        const cacheConfig = path.resolve(
+          cacheDirPath,
+          path.parse(config.configPath).base
+        );
+        fs.ensureDirSync(cacheDirPath);
+        fs.copyFileSync(config.configPath, cacheConfig);
+      },
+      getCacheSumMap: assign({
+        cacheSumMap: ({ context: { config } }) => {
+          const cacheDirPath = path.resolve(config.outputDirPath, "cache");
+          if (fs.existsSync(path.resolve(cacheDirPath, "checksumMap.json"))) {
+            return fs.readJSONSync(
+              path.resolve(cacheDirPath, "checksumMap.json")
+            );
+          }
+
+          fs.outputJSONSync(path.resolve(cacheDirPath, "checksumMap.json"), {});
+          return {};
+        },
+      }),
+      groupDocuments: ({ context }) => {
+        const { allDocuments, cacheSumMap, isNewConfig, config } = context;
+        if (Object.keys(cacheSumMap).length === 0) {
+        } else {
+          // updated
+          const updateFiles = allDocuments.filter(
+            (d) => d.path in cacheSumMap && d.sum !== cacheSumMap[d.path].sum
+          );
+          // deleted
+          const currentFilePath = allDocuments.reduce((acc, curr) => {
+            acc[curr.path] = 1;
+            return acc;
+          }, {});
+          const deletedFiles = Object.keys(cacheSumMap).filter(
+            (p) => !(p in currentFilePath)
+          );
+        }
+        console.log(cacheSumMap);
+        console.log(allDocuments);
+      },
+    },
+  }
+);
+export const load = async () => {
+  const actor = createActor(machine);
+  actor.start();
+  const snapshot = await waitFor(actor, (snapshot) => snapshot.done);
+  return snapshot.context;
 };
 
 const validate = async (config?: any) => {
@@ -50,22 +242,22 @@ const validate = async (config?: any) => {
     throw new Error("VitePluginContent parse config failed");
   }
 
-  const inputDirPath = path.resolve(process.cwd(), parsed.contentDirPath);
+  const contentDirPath = path.resolve(process.cwd(), parsed.contentDirPath);
   const outputDirPath = path.resolve(
     process.cwd(),
     parsed.outputDirPath || ".content"
   );
 
   if (
-    path.resolve(process.cwd(), inputDirPath) ===
+    path.resolve(process.cwd(), contentDirPath) ===
     path.resolve(process.cwd(), outputDirPath)
   ) {
     throw new Error("contentDirPath and outputDirPath should be different");
   }
 
   return {
-    config: parsed,
-    inputDirPath,
+    ...parsed,
+    contentDirPath,
     outputDirPath,
   };
 };

@@ -43,12 +43,13 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && unbuild && tsx scripts/move-tsconfig.ts",
+    "build": "rimraf dist && unbuild",
     "typecheck": "tsc --noEmit",
     "release": "bumpp && npm publish"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.1",
+    "@types/md5": "^2.3.2",
     "@types/micromatch": "^4.0.2",
     "@types/mustache": "^4.2.2",
     "@types/node": "^20.6.0",
@@ -69,17 +70,20 @@
     "camelcase": "^8.0.0",
     "clipanion": "4.0.0-rc.2",
     "del": "^7.1.0",
+    "esbuild": "^0.19.3",
     "fs-extra": "^11.1.1",
     "github-slugger": "^2.0.0",
     "glob": "^10.3.4",
     "image-size": "^1.0.2",
     "joycon": "^3.1.1",
+    "md5": "^2.3.0",
     "mdast-util-to-string": "^4.0.0",
     "mdx-bundler": "^9.2.1",
     "micromatch": "^4.0.5",
     "mustache": "^4.2.0",
     "unified": "10.1.2",
     "unist-util-visit": "^5.0.0",
+    "xstate": "5.0.0-beta.29",
     "zod": "^3.22.2"
   }
 }

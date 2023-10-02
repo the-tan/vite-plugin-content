@@ -35,5 +35,11 @@ export default defineBuildConfig([
     clean: true,
     declaration: false,
     failOnWarn: false,
+    hooks: {
+      "build:done": async () => {
+        const { run } = await import("./scripts/move-tsconfig");
+        await run();
+      },
+    },
   },
 ]);

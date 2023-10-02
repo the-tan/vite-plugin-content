@@ -1,6 +1,6 @@
 import { Command } from "clipanion";
 import { generate } from "../generate";
-import { loadConfig } from "../load";
+import { load } from "../load";
 import { transDocumentsToMap } from "../trans-documents-to-map";
 
 class BuildCommand extends Command {
@@ -9,14 +9,15 @@ class BuildCommand extends Command {
   // name = Option.String();
 
   async execute() {
-    const { config, inputDirPath, outputDirPath } = await loadConfig();
-    const { documents } = config;
-    const documentsMap = transDocumentsToMap({ documents, inputDirPath });
+    const { config } = await load();
+
+    const documentsMap = transDocumentsToMap({
+      documents: config.documents,
+      contentDirPath: config.contentDirPath,
+    });
     this.context.stdout.write(`vite-plugin-content build start...\n`);
     await generate({
       config,
-      inputDirPath,
-      outputDirPath,
       documentsMap,
     });
     this.context.stdout.write(`vite-plugin-content build done.\n`);

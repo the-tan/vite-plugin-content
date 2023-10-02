@@ -26,10 +26,15 @@ export type Config = {
    * ex: "./.mycontent"
    * @default "./.content/"
    */
-  outputDirPath: string;
+  outputDirPath?: string;
   documents: DocumentConfig[];
   remarkPlugins?: unified.Pluggable[];
   rehypePlugins?: unified.Pluggable[];
+};
+
+export type InternalConfig = Config & {
+  outputDirPath: string;
+  source: string;
 };
 
 export type BaseJsonDocument = {
@@ -44,4 +49,11 @@ export type BaseJsonDocument = {
     sourceFileDir: string;
     contentType: string;
   };
+};
+
+export type LoadMachineContext = {
+  config: InternalConfig;
+  isNewConfig: boolean;
+  allDocuments: { path: string; type: string; sum: string }[];
+  cacheSumMap: { [path: string]: { sum: string; type: string } };
 };

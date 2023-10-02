@@ -1,14 +1,15 @@
 export { z } from "zod";
+import fs from "fs-extra";
+import path from "path";
 import { genMdxJson } from "./gen-mdx-json";
 import { genTypes } from "./gen-types";
 import { genSourceJS } from "./gen-source-js";
 import { genEntryJS } from "./gen-entry-js";
-import { Config, DocumentConfig } from "./types";
+import { InternalConfig, DocumentConfig } from "./types";
+import { readCachedCheckSum, writeCachedCheckSum } from "./utils";
 
 type GenerateParams = {
-  config: Config;
-  inputDirPath: string;
-  outputDirPath: string;
+  config: InternalConfig;
   documentsMap: {
     byName: {
       [name: string]: DocumentConfig & {
@@ -22,34 +23,47 @@ type GenerateParams = {
     };
   };
 };
-export const generate = async ({
-  config,
-  inputDirPath,
-  outputDirPath,
-  documentsMap,
-}: GenerateParams) => {
+export const generate = async ({ config, documentsMap }: GenerateParams) => {
+  const {
+    contentDirPath,
+    outputDirPath,
+    documents,
+    remarkPlugins,
+    rehypePlugins,
+  } = config;
   if (Object.keys(documentsMap.byPath).length) {
     // generate all .{mdx|md}.json
-    await Promise.all(
+    const genResult = await Promise.all(
       Object.entries(documentsMap.byPath).map(([path, document]) =>
         genMdxJson({
+          document,
           file: path,
+          contentDirPath,
           outputDirPath,
-          inputDirPath,
-          fieldsSchema: document.fields,
-          remarkPlugins: config.remarkPlugins,
-          rehypePlugins: config.rehypePlugins,
+          remarkPlugins,
+          rehypePlugins,
         })
       )
     );
+
+    // update cache
+    const cachedCheckSum = await readCachedCheckSum(outputDirPath);
+    genResult.map(async ({ path, sum, type }) => {
+      if (!(path in cachedCheckSum) || cachedCheckSum[path].sum !== sum) {
+        cachedCheckSum[path] = { sum, type };
+      }
+    });
+    await writeCachedCheckSum(outputDirPath, cachedCheckSum);
+
     // generate all needed js
     await Promise.all([
       ...config.documents.map((document) =>
         genSourceJS({ outputDirPath, document })
       ),
-      genEntryJS({ outputDirPath, documents: config.documents }),
+      genEntryJS({ outputDirPath, documents }),
     ]);
+
     // generate .d.ts
-    await genTypes({ outputDirPath, documents: config.documents });
+    await genTypes({ outputDirPath, documents });
   }
 };

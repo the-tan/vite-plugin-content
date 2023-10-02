@@ -2,30 +2,31 @@ import path from "node:path";
 import { bundleMDX } from "mdx-bundler";
 import fse from "fs-extra";
 import remarkExtractToc from "./remark-plugins/remark-extract-toc";
-import { Schema, ZodIssue } from "zod";
+import { ZodIssue } from "zod";
 import { Pluggable } from "unified";
-import { BaseJsonDocument } from "./types";
+import { BaseJsonDocument, DocumentConfig } from "./types";
+import { checksum } from "./utils";
 
 type GenMdxJsonOptions = {
   file: string;
-  inputDirPath: string;
+  contentDirPath: string;
   outputDirPath: string;
-  fieldsSchema?: Schema;
+  document: DocumentConfig;
   remarkPlugins?: Pluggable[];
   rehypePlugins?: Pluggable[];
 };
 export async function genMdxJson({
   file,
-  inputDirPath,
+  contentDirPath,
   outputDirPath,
-  fieldsSchema,
+  document,
   remarkPlugins,
   rehypePlugins,
 }: GenMdxJsonOptions) {
   if (!process.env.NODE_ENV) {
     process.env.NODE_ENV = "production";
   }
-
+  const sum = await checksum(file);
   const toc = [] as { value: string; url: string; depth: number }[];
   const result = await bundleMDX({
     file,
@@ -55,8 +56,8 @@ export async function genMdxJson({
   const filePath = result.matter?.path ?? "unknown path";
   const parsedPath = path.parse(filePath);
 
-  if (fieldsSchema) {
-    const parsed = fieldsSchema.safeParse(result.frontmatter);
+  if (document.fields) {
+    const parsed = document.fields.safeParse(result.frontmatter);
     if (!parsed.success) {
       const errorMessage = generateZodErrorMessage({
         issues: parsed.error.issues,
@@ -76,15 +77,26 @@ export async function genMdxJson({
       toc,
       slug: parsedPath.name.replace(/^.+?(\/)/, ""),
       sourceFileName: parsedPath.base,
-      sourceFileDir: parsedPath.dir.replace(inputDirPath, ""),
+      sourceFileDir: parsedPath.dir.replace(contentDirPath, ""),
       contentType: parsedPath.ext.replace(/^\./, ""),
     },
   };
 
-  return fse.outputJSON(
+  fse.outputJSON(
+    `${outputDirPath}/cached/${mdxJson.data.sourceFileDir}/${mdxJson.data.sourceFileName}.json`,
+    mdxJson
+  );
+
+  fse.outputJSON(
     `${outputDirPath}/generated/${mdxJson.data.sourceFileDir}/${mdxJson.data.sourceFileName}.json`,
     mdxJson
   );
+
+  return {
+    path: file,
+    type: document.name,
+    sum,
+  };
 }
 
 type GenerateZodErrorMessage = {

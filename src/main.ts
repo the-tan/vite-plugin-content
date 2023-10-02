@@ -2,14 +2,14 @@ export { z } from "zod";
 import micromatch from "micromatch";
 import { genMdxJson } from "./gen-mdx-json";
 import { transDocumentsToMap } from "./trans-documents-to-map";
-import { Config } from "./types";
+import { Config, InternalConfig } from "./types";
 import { Plugin } from "vite";
-import { loadConfig } from "./load";
+import { load } from "./load";
 import { generate } from "./generate";
 
 export function vitePluginContent(_config?: Config): Plugin {
-  let config: Config;
-  let inputDirPath: string;
+  let internalConfig: InternalConfig;
+  let contentDirPath: string;
   let outputDirPath: string;
   let documentsMap: ReturnType<typeof transDocumentsToMap>;
 
@@ -17,17 +17,16 @@ export function vitePluginContent(_config?: Config): Plugin {
     name: "vite-plugin-content",
     enforce: "pre",
     async config() {
-      ({ config, inputDirPath, outputDirPath } = await loadConfig());
-      const { documents } = config;
-      documentsMap = transDocumentsToMap({ documents, inputDirPath });
+      const loadMachineContext = await load();
+      internalConfig = loadMachineContext.config;
+      const { documents } = internalConfig;
+      documentsMap = transDocumentsToMap({ documents, contentDirPath });
 
       return { server: { watch: { disableGlobbing: false } } };
     },
     async buildStart() {
       await generate({
-        config,
-        inputDirPath,
-        outputDirPath,
+        config: internalConfig,
         documentsMap,
       });
     },
@@ -40,13 +39,17 @@ export function vitePluginContent(_config?: Config): Plugin {
           genMdxJson({
             file: path,
             outputDirPath,
-            inputDirPath,
-            fieldsSchema: documentsMap.byPath[path].fields,
-            remarkPlugins: config.remarkPlugins,
-            rehypePlugins: config.rehypePlugins,
+            contentDirPath,
+            document: documentsMap.byName[documentsMap.byPath[path].name],
+            remarkPlugins: internalConfig.remarkPlugins,
+            rehypePlugins: internalConfig.rehypePlugins,
           });
         }
       });
     },
   };
+}
+
+export function definedConfig(config: Config) {
+  return config;
 }

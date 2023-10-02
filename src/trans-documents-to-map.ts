@@ -1,28 +1,13 @@
 import path from "node:path";
 import { DocumentConfig } from "./types";
-import { globSync } from "glob";
-
-const getPathsWith = ({
-  folderPath,
-  pattern,
-}: {
-  folderPath: string;
-  pattern: string;
-}) => {
-  if (!folderPath) return [];
-  return globSync(pattern, {
-    cwd: path.resolve(folderPath),
-    nodir: true,
-    absolute: true,
-  });
-};
+import { getPathsWithSync } from "./utils";
 
 export const transDocumentsToMap = ({
   documents,
-  inputDirPath,
+  contentDirPath,
 }: {
   documents: DocumentConfig[];
-  inputDirPath: string;
+  contentDirPath: string;
 }) => {
   const result = {
     byName: {},
@@ -35,9 +20,9 @@ export const transDocumentsToMap = ({
   for (const document of documents) {
     result.byName[document.name] = {
       ...document,
-      paths: getPathsWith({
+      paths: getPathsWithSync({
         pattern: "**/*.{mdx,md}",
-        folderPath: path.resolve(inputDirPath, document.folder),
+        folderPath: path.resolve(contentDirPath, document.folder),
       }),
     };
 
